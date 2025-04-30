@@ -1,0 +1,13 @@
+aws-iot-device-sdk-js-v2/ 
+
+__pycache__/
+
+chaves/
+
+.ini
+
+# disp_test.private.pem
+# disp_test.public.key
+# disp_test.public.key
+# root-CA.crt
+# start.sh
