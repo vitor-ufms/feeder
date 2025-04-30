@@ -28,6 +28,8 @@ t2 = threading.Thread(target=consumidor)
 t1.start()
 t2.start()
 
-# Esperando terminar
+# Esperando terminarr
 t1.join()
 t2.join()
+
+
