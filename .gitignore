@@ -4,6 +4,7 @@ __pycache__/
 
 chaves/
 
+*.ini
 .ini
 
 # disp_test.private.pem
