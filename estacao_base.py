@@ -8,7 +8,7 @@ import inspect
 import base64
 from datetime import datetime, UTC
 
-from canal import fila_feeder_estacao, fila_estacao_feeder 
+from canalLora import fila_feeder_estacao, fila_estacao_feeder 
 from  feeder import listen_estacao_base, feeder_main
 
 # region variaveis globais
@@ -63,9 +63,10 @@ def Delta(topic, payload, dup, qos, retain, **kwarg):
     json_payload = json.loads(payload.decode())
 
     # print(f"Delta: {topic} \n {payload} \n {json_payload}") #{dup} {qos} {retain}")
-    # "$aws/things/disp_test/shadow/name/30AEA47390DC_A4E57C7F0BEC/update/delta
-  
-    idEstacao, idEfeeder = topic.split("shadow/name/")[1].split("/update/delta")[0].split("_")
+    # "$aws/things/disp_test/shadow/name/A4E57C7F0BEC/update/delta
+    
+    # informação para saber qual efeeder enviar a msg
+    idEfeeder = topic.split("shadow/name/")[1].split("/update/delta")[0]
 
     print("procedimentos delta ... \n ")
     ### faz um get 
@@ -73,16 +74,15 @@ def Delta(topic, payload, dup, qos, retain, **kwarg):
     # print(f" 'idEstacao':'{idEstacao}' 'idEfeeder':'{idEfeeder}' state: {json_payload['state']}")
 
     message = {
-        "idEstacao": idEstacao,
         "idEfeeder": idEfeeder,
         "payload": json_payload['state']['payload']
         }
     # print(message)
 
     # send message para o feeder
-    # listen_estacao_base(message)
     fila_estacao_feeder.put(message)
-    
+
+# Faz a conexão na aws
 def conect_mqtt():
     global mqtt_connection
     # Criando conexão MQTT
@@ -103,6 +103,7 @@ def conect_mqtt():
     except Exception as e:
         print(f"Erro na execução: {e}")
 
+# Se inscreve nos tópicos e fica aguardando msg
 def topic_listen():
 
     global mqtt_connection        
@@ -110,14 +111,12 @@ def topic_listen():
     shadow_topics = [
         [SHADOW_GET_ACCEPTED, nothing], 
         [SHADOW_UPDATE_ACCEPTED, nothing], 
-        [SHADOW_UPDATE_REJECTED, nothing],
+        # [SHADOW_UPDATE_REJECTED, nothing],
         [SHADOW_UPDATE_DELTA, Delta]
         # [SHADOW_TEST, Delta]
-        # SHADOW_UPDATE_DOCUMENTS
     ]
     
     # Inscrevendo-se nos tópicos do shadow
-    # print("Inscrevendo-se nos tópicos do Device Shadow...")
     for topic in shadow_topics:
         # logger.info(f"Inscrevendo-se em: {topic}")
         subscribe_future, packet_id = mqtt_connection.subscribe(
@@ -144,16 +143,13 @@ def listen_feeder():
 
         print(' publicar no tópico reported ')
 
-        # return
-        # publicar mensagem no tópico
-        topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
+        # topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
+        topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{message['idEfeeder']}/update"
 
         message_send = {
             "state": {
                 "reported": {
-                    "payload": message['payload'],
-                    "idEfeeder": message['idEfeeder'],
-                    "idEstacao": message['idEstacao']
+                    "payload": message['payload']
                 }
             }
         }

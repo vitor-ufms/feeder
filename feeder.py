@@ -1,4 +1,4 @@
-from canal import fila_feeder_estacao, fila_estacao_feeder 
+from canalLora import fila_feeder_estacao, fila_estacao_feeder 
 from datetime import datetime, UTC
 import inspect
 import base64
@@ -17,8 +17,7 @@ trato_feeder_current = {
     "fimCiclo": '0',
     "diasTrato": 109,
     "horarios": ['09:00', '09:00'],
-    "idEfeeder": "A4:E5:7C:7F:0B:EC",
-    "idEstacao": "30:AE:A4:73:90:DC"
+    "idEfeeder": "A4:E5:7C:7F:0B:EC"
 }
 
 # region ################ FUNÇÕES FEEDER ####################
@@ -27,8 +26,7 @@ def listen_estacao_base():
 
     while True:
         message = fila_estacao_feeder.get() # fica esperando um msg na fila
-        # if item is None:
-        #     break  # Sai se receber sinal de fim
+        
         print(f"Feeder: recebeu {message} \n linha: {inspect.currentframe().f_lineno}")
         fila_estacao_feeder.task_done()
 
