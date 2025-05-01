@@ -25,7 +25,7 @@ ENDPOINT = "a13n5m7gho0mxa-ats.iot.sa-east-1.amazonaws.com"
 CLIENT_ID = "sdk-java"  # ID permitido pela política
 THING_NAME = "disp_test"  # Nome do dispositivo na AWS IoT
 # SHADOW_NAME = "30AEA47390DC_A4E57C7F0BEC" # {mac_estação}_{mac_feeder}
-SHADOW_NAME = "30:AE:A4:73:90:DC_A4:E5:7C:7F:0B:EC" # {mac_estação}_{mac_feeder} mac_feeder deixar com 2 pontos
+SHADOW_NAME = "A4:E5:7C:7F:0B:EC" # {mac_estação}_{mac_feeder} mac_feeder deixar com 2 pontos
 QOS = mqtt.QoS.AT_LEAST_ONCE
 
 # Tópicos do Device Shadow

@@ -14,7 +14,7 @@ ENDPOINT = "a13n5m7gho0mxa-ats.iot.sa-east-1.amazonaws.com"  # Endpoint correto 
 CLIENT_ID = "basicPubSub"  # ID de cliente permitido pela política
 # TOPIC = "$aws/things/disp_test/shadow/update"  # 
 # TOPIC = "$aws/things/disp_test/shadow/name/30AEA47390DC_A4E57C7F0BEC/update/"
-TOPIC = "$aws/things/disp_test/shadow/name/30:AE:A4:73:90:DC_A4:E5:7C:7F:0B:EC/update"
+TOPIC = "$aws/things/disp_test/shadow/name/A4:E5:7C:7F:0B:EC/update"
 # TOPIC = "aws/things/disp_test/shadow/get"
 QOS = mqtt.QoS.AT_LEAST_ONCE  # QoS 1
 
@@ -38,9 +38,7 @@ def publish_message():
     message = {
         "state": {
             "desired": {
-                "payload": "c2fMI12ANQ95AjwZBgfpbQsAEAA=",
-                "idEfeeder": "A4:E5:7C:7F:0B:EC",
-                "idEstacao": "30:AE:A4:73:90:DC"
+                "payload": "c2fMI12ANQ95AjwZBgfpbQsAEAA="
             }
         }
     }
