@@ -29,14 +29,14 @@ SHADOW_NAME = "A4:E5:7C:7F:0B:EC" # {mac_estação}_{mac_feeder} mac_feeder deix
 QOS = mqtt.QoS.AT_LEAST_ONCE
 
 # Tópicos do Device Shadow
-SHADOW_UPDATE_TOPIC = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
-SHADOW_UPDATE_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update/accepted"
-SHADOW_UPDATE_REJECTED = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update/rejected"
+# SHADOW_UPDATE_TOPIC = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
+# SHADOW_UPDATE_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update/accepted"
+# SHADOW_UPDATE_REJECTED = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update/rejected"
 SHADOW_UPDATE_DELTA = f"$aws/things/{THING_NAME}/shadow/name/+/update/delta"
 # SHADOW_UPDATE_DOCUMENTS = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update/documents"
-SHADOW_GET_TOPIC = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/get"
-SHADOW_GET_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/get/accepted"
-SHADOW_TEST = f"$aws/things/{THING_NAME}/shadow/name/+/update/delta"
+# SHADOW_GET_TOPIC = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/get"
+SHADOW_GET_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/name/+/get/accepted"
+# SHADOW_TEST = f"$aws/things/{THING_NAME}/shadow/name/+/update/delta"
 
 # Caminhos para os certificados
 CERT_PATH = "chaves/disp_test.cert.pem"
@@ -82,6 +82,29 @@ def Delta(topic, payload, dup, qos, retain, **kwarg):
     # send message para o feeder
     fila_estacao_feeder.put(message)
 
+def Get(topic, payload, dup, qos, retain, **kwarg):
+      # Decodifica o payload JSON
+    json_payload = json.loads(payload.decode())
+
+    # f"$aws/things/{THING_NAME}/shadow/name/+/get/accepted"
+    
+    # informação para saber qual efeeder enviar a msg
+    idEfeeder = topic.split("shadow/name/")[1].split("/get/accepted")[0]
+
+    print("procedimentos get/accepted ... \n ")
+    ### faz um get 
+    ### ou pega somento os valores diferentes
+    # print(f" 'idEstacao':'{idEstacao}' 'idEfeeder':'{idEfeeder}' state: {json_payload['state']}")
+
+    message = {
+        "idEfeeder": idEfeeder,
+        "getaccepted": json_payload['state']['desired']['payload']
+        }
+    # print(message)
+
+    # send message para o feeder
+    fila_estacao_feeder.put(message)
+
 # Faz a conexão na aws
 def conect_mqtt():
     global mqtt_connection
@@ -109,8 +132,8 @@ def topic_listen():
     global mqtt_connection        
     # Lista de tópicos para se inscrever
     shadow_topics = [
-        [SHADOW_GET_ACCEPTED, nothing], 
-        [SHADOW_UPDATE_ACCEPTED, nothing], 
+        [SHADOW_GET_ACCEPTED, Get], 
+        # [SHADOW_UPDATE_ACCEPTED, nothing], 
         # [SHADOW_UPDATE_REJECTED, nothing],
         [SHADOW_UPDATE_DELTA, Delta]
         # [SHADOW_TEST, Delta]
@@ -128,46 +151,55 @@ def topic_listen():
     while True: # while  principal
         time.sleep(10)
         print("Aguardando...")
+
+def topic_pub(message_send, topic_feeder):
+ # Convertendo para JSON string
+    message_json = json.dumps(message_send)
+
+    # A função publish retorna (future, packet_id)
+    future_published, packet_id = mqtt_connection.publish(
+        topic=topic_feeder,
+        payload=message_json,
+        qos=QOS
+    )
     
+    # Aguarda a confirmação da publicação
+    future_published.result()
+    print(f"✅ Mensagem publicada com sucesso!  (packet_id: {packet_id})")
+
 def listen_feeder():
 
     while True:
 
         message = fila_feeder_estacao.get() # fica esperando um msg na fila
-        # if item is None:
-        #     break  # Sai se receber sinal de fim
-        print(f"Estação recebeu do feeder {message} \n linha: {inspect.currentframe().f_lineno}")
-        fila_feeder_estacao.task_done()
+        
 
-        global mqtt_connection
+        if 'get' in message:
+            # é um get
+            topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{message['idEfeeder']}/get"
+            message_send = {}
+            topic_pub(message_send, topic_feeder) 
+        else:   
+            print(f"Estação recebeu do feeder {message} \n linha: {inspect.currentframe().f_lineno}")
+            print(' publicar no tópico reported ')
 
-        print(' publicar no tópico reported ')
+            
+            global mqtt_connection
 
-        # topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
-        topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{message['idEfeeder']}/update"
+            # topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
+            topic_feeder = f"$aws/things/{THING_NAME}/shadow/name/{message['idEfeeder']}/update"
 
-        message_send = {
-            "state": {
-                "reported": {
-                    "payload": message['payload']
+            message_send = {
+                "state": {
+                    "reported": {
+                        "payload": message['payload']
+                    }
                 }
             }
-        }
+            topic_pub(message_send, topic_feeder)
+        fila_feeder_estacao.task_done()
 
-        # Convertendo para JSON string
-        message_json = json.dumps(message_send)
-
-        # A função publish retorna (future, packet_id)
-        future_published, packet_id = mqtt_connection.publish(
-            topic=topic_feeder,
-            payload=message_json,
-            qos=QOS
-        )
-        
-        # Aguarda a confirmação da publicação
-        future_published.result()
-        print(f"✅ Mensagem publicada com sucesso! (packet_id: {packet_id})")
-
+       
 #endregion 
 
 if __name__ == "__main__":

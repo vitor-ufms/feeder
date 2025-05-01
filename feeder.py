@@ -16,22 +16,12 @@ trato_feeder_current = {
     "tipoSupl": 60,
     "fimCiclo": '0',
     "diasTrato": 109,
-    "horarios": ['09:00', '09:00'],
+    "horarios": ['08:00', '08:00'],
     "idEfeeder": "A4:E5:7C:7F:0B:EC"
 }
 
 # region ################ FUNÇÕES FEEDER ####################
 
-def listen_estacao_base():
-
-    while True:
-        message = fila_estacao_feeder.get() # fica esperando um msg na fila
-        
-        print(f"Feeder: recebeu {message} \n linha: {inspect.currentframe().f_lineno}")
-        fila_estacao_feeder.task_done()
-
-        # se a mensagem for de configuração, chama configure  e retorna 
-        feeder_config(message)
 
 def decode_packet(payload):
     # Adiciona padding se necessário
@@ -76,31 +66,69 @@ def decode_packet(payload):
         "horarios": horarios
     }
 
+def encode(pacote):
+    print('')
+
 def feeder_config(message):
-    print(" ")
+    # print(" ")
     
     payload_struct = decode_packet(message['payload'])
-
     # atualiza a configuração atual
     trato_feeder_current.update(payload_struct)
+    print('configuração do feeder atualizada')
 
- 
+    # deve ler configuração atual,montar o pacote e retornar
     fila_feeder_estacao.put(message)
-    
-    # print('passou ')
+
+def listen_estacao_base():
+
+    while True:
+        message = fila_estacao_feeder.get() # fica esperando um msg na fila
+        
+        if 'getaccepted' in message:
+            payload_struct = decode_packet(message['getaccepted'])
+            # atualiza a configuração atual
+            trato_feeder_current.update(payload_struct)
+            print('configuração do feeder atualizada')
+            # precisa retornar um reported
+            # deve ler configuração atual,montar o pacote e retornar
+            payload = message['getaccepted']
+            message = {
+                "idEfeeder": trato_feeder_current['idEfeeder'],
+                "payload": payload
+            }
+            fila_feeder_estacao.put(message)
+
+        else:
+        
+            print(f"Feeder: recebeu {message} \n linha: {inspect.currentframe().f_lineno}")
+            # se a mensagem for de configuração, chama configure  e retorna 
+            feeder_config(message)
+
+        fila_estacao_feeder.task_done()
 
 def feeder_main():
     if FEEDER_ON is not True:
         return
     else:
+        print('Configuração de trato no feeder: ',trato_feeder_current)
+        print('-'*50)
+        message = {
+            "idEfeeder": trato_feeder_current['idEfeeder'],
+            "get": {}
+        }
+        # pede para atualizar get {}
+        fila_feeder_estacao.put(message)
+
         while True:
             # print('fedeer ligado')
             #procedimentos, configuraçã direto no feeder
+            time.sleep(20)
+
             print('Configuração de trato no feeder: ',trato_feeder_current)
             print('-'*50)
             # faz um get para pegar conf da nuvem
             # envia a configuração atual 
-            time.sleep(20)
-
+            
 # endregion
 ####################################
