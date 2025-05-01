@@ -38,7 +38,7 @@ def publish_message():
     message = {
         "state": {
             "desired": {
-                "payload": "c2fMI74ANQ95AjwZBgfpbQsAEAA=",
+                "payload": "c2fMI12ANQ95AjwZBgfpbQsAEAA=",
                 "idEfeeder": "A4:E5:7C:7F:0B:EC",
                 "idEstacao": "30:AE:A4:73:90:DC"
             }
