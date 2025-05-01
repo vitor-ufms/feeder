@@ -5,6 +5,7 @@ __pycache__/
 chaves/
 
 lambdas/desktop.ini
+url_lambda.py
 
 *.ini
 .ini
