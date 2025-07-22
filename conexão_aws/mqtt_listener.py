@@ -12,25 +12,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Shadow_Monitor")
 
+# region
+
 # Configurações do cliente
 ENDPOINT = "a13n5m7gho0mxa-ats.iot.sa-east-1.amazonaws.com"
 CLIENT_ID = "sdk-java"  # ID permitido pela política
 THING_NAME = "disp_test"  # Nome do dispositivo na AWS IoT
+THING_NAME_esp = "/name/A4:E5:7C:7F:0B:EC"
 QOS = mqtt.QoS.AT_LEAST_ONCE
 
 # Tópicos do Device Shadow
-SHADOW_UPDATE_TOPIC = f"$aws/things/{THING_NAME}/shadow/update"
-SHADOW_UPDATE_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/update/accepted"
-SHADOW_UPDATE_REJECTED = f"$aws/things/{THING_NAME}/shadow/update/rejected"
-SHADOW_UPDATE_DELTA = f"$aws/things/{THING_NAME}/shadow/update/delta"
-# SHADOW_UPDATE_DOCUMENTS = f"$aws/things/{THING_NAME}/shadow/update/documents"
-SHADOW_GET_TOPIC = f"$aws/things/{THING_NAME}/shadow/get"
-SHADOW_GET_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/get/accepted"
+SHADOW_UPDATE_TOPIC = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/update"
+SHADOW_UPDATE_ACCEPTED = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/update/accepted"
+SHADOW_UPDATE_REJECTED = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/update/rejected"
+SHADOW_UPDATE_DELTA = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/update/delta"
+# SHADOW_UPDATE_DOCUMENTS = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/update/documents"
+SHADOW_GET_TOPIC = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/get"
+SHADOW_GET_ACCEPTED = f"$aws/things/{THING_NAME}/shadow{THING_NAME_esp}/get/accepted"
+
+
+
+
 
 # Caminhos para os certificados
-CERT_PATH = "disp_test.cert.pem"
-PRIVATE_KEY_PATH = "disp_test.private.key"
-ROOT_CA_PATH = "root-CA.crt"
+CERT_PATH = "../chaves/disp_test.cert.pem"
+PRIVATE_KEY_PATH = "../chaves/disp_test.private.key"
+ROOT_CA_PATH = "../chaves/root-CA.crt"
+
+# endregion
 
 # Variável para controlar o loop principal
 running = True
@@ -51,19 +60,19 @@ def display_shadow_state(shadow_data):
         state = shadow_data["state"]
         
         if "desired" in state:
-            logger.info("📝 ESTADO DESEJADO:")
+            logger.info(" ESTADO DESEJADO:")
             logger.info(json.dumps(state["desired"], indent=2, ensure_ascii=False))
         else:
-            logger.info("📝 Nenhum estado desejado definido.")
+            logger.info(" Nenhum estado desejado definido.")
         
         if "reported" in state:
-            logger.info("📊 ESTADO REPORTADO:")
+            logger.info(" ESTADO REPORTADO:")
             logger.info(json.dumps(state["reported"], indent=2, ensure_ascii=False))
         else:
-            logger.info("📊 Nenhum estado reportado definido.")
+            logger.info(" Nenhum estado reportado definido.")
         
         if "delta" in state:
-            logger.info("⚠️ DELTA (diferenças entre desired e reported):")
+            logger.info(" DELTA (diferenças entre desired e reported):")
             logger.info(json.dumps(state["delta"], indent=2, ensure_ascii=False))
     
     if "metadata" in shadow_data:
@@ -89,12 +98,12 @@ def on_message_received(topic, payload, dup, qos, retain, **kwargs):
         
         # Processa de acordo com o tópico
         if topic == SHADOW_GET_ACCEPTED:
-            logger.info("✅ Recebido estado completo do shadow após solicitação GET")
+            # logger.info(" Recebido estado completo do shadow após solicitação GET")
             current_shadow = json_payload
             display_shadow_state(current_shadow)
             
         elif topic == SHADOW_UPDATE_ACCEPTED:
-            logger.info("✅ Atualização do shadow aceita")
+            # logger.info("Atualização do shadow aceita")
             # Atualiza parcialmente o shadow atual se existir
             if current_shadow and "state" in json_payload:
                 if "desired" in json_payload["state"] and "state" in current_shadow:
@@ -111,12 +120,12 @@ def on_message_received(topic, payload, dup, qos, retain, **kwargs):
             logger.info(json.dumps(json_payload, indent=2, ensure_ascii=False))
             
         elif topic == SHADOW_UPDATE_REJECTED:
-            logger.error("❌ Atualização do shadow rejeitada")
+            logger.error("Atualização do shadow rejeitada")
             logger.error("Motivo:")
             logger.error(json.dumps(json_payload, indent=2, ensure_ascii=False))
             
         elif topic == SHADOW_UPDATE_DELTA:
-            logger.info("🔄 Detectado DELTA no shadow (diferença entre desired e reported)")
+            logger.info("Detectado DELTA no shadow (diferença entre desired e reported)")
             logger.info("Alterações pendentes:")
             logger.info(json.dumps(json_payload, indent=2, ensure_ascii=False))
             
@@ -133,19 +142,19 @@ def on_message_received(topic, payload, dup, qos, retain, **kwargs):
 
 # Função para solicitar o estado atual do shadow
 def get_current_shadow(mqtt_connection):
-    logger.info(f"Solicitando o estado atual do shadow para {THING_NAME}...")
+    # logger.info(f"Solicitando o estado atual do shadow para {THING_NAME}...")
     get_future, _ = mqtt_connection.publish(
         topic=SHADOW_GET_TOPIC,
         payload="{}",
         qos=QOS
     )
     get_future.result()
-    logger.info("Solicitação enviada. Aguardando resposta...")
+    # logger.info("Solicitação enviada. Aguardando resposta...")
 
 def main():
     try:
         # Criando conexão MQTT
-        logger.info("Inicializando conexão MQTT...")
+        # logger.info("Inicializando conexão MQTT...")
         mqtt_connection = mqtt_connection_builder.mtls_from_path(
             endpoint=ENDPOINT,
             cert_filepath=CERT_PATH,
@@ -156,24 +165,24 @@ def main():
         )
         
         # Conectando ao AWS IoT Core
-        logger.info(f"Conectando ao AWS IoT Core em {ENDPOINT}...")
+        # logger.info(f"Conectando ao AWS IoT Core em {ENDPOINT}...")
         connect_future = mqtt_connection.connect()
         connect_result = connect_future.result()
         logger.info(f"Conectado! Resultado: {connect_result}")
         
         # Lista de tópicos para se inscrever
         shadow_topics = [
-            SHADOW_GET_ACCEPTED,
-            SHADOW_UPDATE_ACCEPTED, 
-            SHADOW_UPDATE_REJECTED,
+            # SHADOW_GET_ACCEPTED,
+            # SHADOW_UPDATE_ACCEPTED, 
+            # SHADOW_UPDATE_REJECTED,
             SHADOW_UPDATE_DELTA
             # SHADOW_UPDATE_DOCUMENTS
         ]
         
         # Inscrevendo-se nos tópicos do shadow
-        logger.info("Inscrevendo-se nos tópicos do Device Shadow...")
+        # logger.info("Inscrevendo-se nos tópicos do Device Shadow...")
         for topic in shadow_topics:
-            logger.info(f"Inscrevendo-se em: {topic}")
+            # logger.info(f"Inscrevendo-se em: {topic}")
             subscribe_future, packet_id = mqtt_connection.subscribe(
                 topic=topic,
                 qos=QOS,
@@ -187,9 +196,9 @@ def main():
         # get_current_shadow(mqtt_connection)
         
         # Loop principal - mantém o programa em execução
-        logger.info("\n Monitor de Device Shadow iniciado")
-        logger.info("Monitorando todos os eventos do shadow para o dispositivo 'disp_test'")
-        logger.info("Pressione Ctrl+C para sair")
+        # logger.info("\n Monitor de Device Shadow iniciado")
+        # logger.info("Monitorando todos os eventos do shadow para o dispositivo 'disp_test'")
+        # logger.info("Pressione Ctrl+C para sair")
         logger.info("=" * 50)
         
         while running:

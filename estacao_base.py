@@ -25,8 +25,10 @@ ENDPOINT = "a13n5m7gho0mxa-ats.iot.sa-east-1.amazonaws.com"
 CLIENT_ID = "sdk-java"  # ID permitido pela política
 THING_NAME = "disp_test"  # Nome do dispositivo na AWS IoT
 # SHADOW_NAME = "30AEA47390DC_A4E57C7F0BEC" # {mac_estação}_{mac_feeder}
-SHADOW_NAME = "A4:E5:7C:7F:0B:EC" # {mac_estação}_{mac_feeder} mac_feeder deixar com 2 pontos
+# SHADOW_NAME = "A4:E5:7C:7F:0B:EC" # {mac_estação}_{mac_feeder} mac_feeder deixar com 2 pontos
 QOS = mqtt.QoS.AT_LEAST_ONCE
+# mqtt.QoS.EXACTLY_ONCE
+# mqtt.QoS.AT_MOST_ONCE
 
 # Tópicos do Device Shadow
 # SHADOW_UPDATE_TOPIC = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}/update"
@@ -47,10 +49,30 @@ mqtt_connection = None
 
 # endregion
 
+# region mqtt###########################
+
+#  conexão MQTT é perdida 
+def on_connection_interrupted(connection, error, **kwargs):
+    print(f" Conexão perdida! Erro: {error}")
+
+#  conexão MQTT é reiniciada( restabelecida) detecta e tenta reconectar automaticamente.
+
+def on_connection_resumed(connection, return_code, session_present, **kwargs):
+    if return_code == mqtt.ConnectReturnCode.ACCEPTED:
+        print(" Conexão reestabelecida!")
+        topic_listen() #clean_session=True, precisa dessa função
+        # faz um get aqui
+
+    else:
+        print(f" Falha na reconexão. Código: {return_code}")
+
+# endregion
 
 # region ################## FUNÇÕES ESTAÇÃO BASE ##############
 def nothing(topic, payload, dup, qos, retain, **kwarg):
     # nada
+    print('test nothing')
+    print(f"--- nothing: {topic} \n {payload} \n") # {dup} {qos} {retain}")
     return
 
 def on_get_accepted(topic, payload, dup, qos, retain, **kwarg):
@@ -116,10 +138,19 @@ def conect_mqtt():
             cert_filepath=CERT_PATH,
             pri_key_filepath=PRIVATE_KEY_PATH,
             ca_filepath=ROOT_CA_PATH,
-            client_id=CLIENT_ID,
-            clean_session=False
+            client_id=CLIENT_ID, # identifica a sessão
+            clean_session=False,# quando reconecta recebe as msg não confirmadas
+            on_connection_interrupted=on_connection_interrupted,  # Callback para falhas
+            on_connection_resumed=on_connection_resumed,          # Callback para reconexão
+            keep_alive_secs=30  # PING a cada 30 segundos (timeout = 45 segundos)
         )
         
+        # clean_session=False conexão persistente
+        # clean_session=True conexão não persistente precisa se reinscrever manualmente nos tópicos para voltar a receber mensagens.
+        # persistente recebe pacotes perdidos mas tem um tempo determinado, depois disso perde todos.
+        #  
+
+
         # Conectando ao AWS IoT Core
         connect_future = mqtt_connection.connect()
         connect_result = connect_future.result()
@@ -129,13 +160,15 @@ def conect_mqtt():
 # Se inscreve nos tópicos e fica aguardando msg
 def topic_listen():
 
+    print("escrevendo nos tópicos")
     global mqtt_connection        
     # Lista de tópicos para se inscrever
     shadow_topics = [
-        [SHADOW_GET_ACCEPTED, Get], 
+        # [SHADOW_GET_ACCEPTED, Get], 
+        # [SHADOW_GET_ACCEPTED, nothing], 
         # [SHADOW_UPDATE_ACCEPTED, nothing], 
-        # [SHADOW_UPDATE_REJECTED, nothing],
-        [SHADOW_UPDATE_DELTA, Delta]
+        [SHADOW_UPDATE_DELTA, nothing]
+        # [SHADOW_UPDATE_DELTA, Delta]
         # [SHADOW_TEST, Delta]
     ]
     
@@ -148,9 +181,16 @@ def topic_listen():
             callback=topic[1]
         )
 
+def main_base():
+
     while True: # while  principal
-        time.sleep(10)
-        print("Aguardando...")
+        # time.sleep(10)
+        a = 0
+        print("Aguardando... digite 1 para sair")
+        a = int(input(' '))
+        if a == 1:
+            break
+       
 
 def topic_pub(message_send, topic_feeder):
  # Convertendo para JSON string
@@ -165,7 +205,7 @@ def topic_pub(message_send, topic_feeder):
     
     # Aguarda a confirmação da publicação
     future_published.result()
-    print(f"✅ Mensagem publicada com sucesso!  (packet_id: {packet_id})")
+    print(f" Mensagem publicada com sucesso!  (packet_id: {packet_id})")
 
 def listen_feeder():
 
@@ -207,20 +247,23 @@ if __name__ == "__main__":
     conect_mqtt()
     # topic_listen()
     t1= threading.Thread(target=topic_listen)
-    t3 = threading.Thread(target=listen_feeder)
+    # t3 = threading.Thread(target=listen_feeder) # escuta feeder
 
-    t2 = threading.Thread(target=listen_estacao_base)
-    t4 = threading.Thread(target=feeder_main)
+    # t2 = threading.Thread(target=listen_estacao_base) # escuta estação
+    # t4 = threading.Thread(target=feeder_main) # ligar no feeder
     
+    t5 = threading.Thread(target=main_base) # Todo
 
     t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
+    # t2.start()
+    # t3.start()
+    # t4.start()
+    t5.start()
 
     t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
+    # t2.join()
+    # t3.join()
+    # t4.join()
+    t5.join()
 
 

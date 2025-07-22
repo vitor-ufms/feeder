@@ -1,3 +1,4 @@
+# publica um mensagem na aws
 import json
 import time
 # import uuid
@@ -20,9 +21,9 @@ QOS = mqtt.QoS.AT_LEAST_ONCE  # QoS 1
 
 
 # Caminhos para os certificados - atualizados para pasta raiz
-CERT_PATH = "chaves/disp_test.cert.pem"  # Certificado do dispositivo
-PRIVATE_KEY_PATH = "chaves/disp_test.private.key"  # Chave privada
-ROOT_CA_PATH = "chaves/root-CA.crt"  # Certificado raiz da Amazon
+CERT_PATH = "../chaves/disp_test.cert.pem"  # Certificado do dispositivo
+PRIVATE_KEY_PATH = "../chaves/disp_test.private.key"  # Chave privada
+ROOT_CA_PATH = "../chaves/root-CA.crt"  # Certificado raiz da Amazon
 
 # Função de callback para conexão
 def on_connection_interrupted(connection, error, **kwargs):
@@ -38,7 +39,7 @@ def publish_message():
     message = {
         "state": {
             "desired": {
-                "payload": "c2fMI12ANQ95AjwZBgfpbQsAEAA="
+                "payload": "c2fMI12ANQ95AjwZBgfpbQsAEAA=1"
             }
         }
     }
@@ -57,7 +58,7 @@ def publish_message():
     
     # Aguarda a confirmação da publicação
     future_published.result()
-    logger.info(f"✅ Mensagem publicada com sucesso! (packet_id: {packet_id})")
+    logger.info(f" Mensagem publicada com sucesso! (packet_id: {packet_id})")
 
 # Função principal
 def main():

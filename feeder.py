@@ -5,7 +5,8 @@ import base64
 import struct
 import time
 
-FEEDER_ON = True 
+FEEDER_ON = False 
+
 
 trato_feeder_current = {
     "tipo": 115,
